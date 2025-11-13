@@ -20,7 +20,8 @@ export default function App() {
         </select>
       </div>
 
-      <Board size={size} onWin={setWinner} />
+      <Board key={size} size={size} onWin={setWinner} />
+
 
       {winner && <WinnerModal winner={winner} onClose={() => setWinner(null)} />}
     </div>
