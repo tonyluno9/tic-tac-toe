@@ -1,53 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Square from "./Square";
 
-export default function Board({ size, onWin }) {
-  const [squares, setSquares] = useState(Array(size * size).fill(null));
+export default function Board({ size, mode, onWin }) {
+  const total = size * size;
+  const [squares, setSquares] = useState(Array(total).fill(null));
   const [isX, setIsX] = useState(true);
+
+  // Easter Egg
+  const [clickCount, setClickCount] = useState(0);
+  const [lastClicked, setLastClicked] = useState(null);
 
   function resetBoard() {
     setSquares(Array(size * size).fill(null));
     setIsX(true);
   }
 
+  // Easter egg → 3 clics en la misma casilla
+  function handleEasterEgg(i) {
+    if (i === lastClicked) {
+      setClickCount((c) => c + 1);
+      if (clickCount + 1 === 3) {
+        alert("Ángel Antonio Pérez Reyes\nMatrícula: 66823");
+        setClickCount(0);
+      }
+    } else {
+      setLastClicked(i);
+      setClickCount(1);
+    }
+  }
+
   function checkWinner(cells) {
     const lines = [];
 
-    // Filas
+    // Rows
     for (let r = 0; r < size; r++) {
-      const row = [];
-      for (let c = 0; c < size; c++) {
-        row.push(r * size + c);
-      }
-      lines.push(row);
+      lines.push([...Array(size)].map((_, c) => r * size + c));
     }
 
-    // Columnas
+    // Columns
     for (let c = 0; c < size; c++) {
-      const col = [];
-      for (let r = 0; r < size; r++) {
-        col.push(r * size + c);
-      }
-      lines.push(col);
+      lines.push([...Array(size)].map((_, r) => r * size + c));
     }
 
-    // Diagonal principal
-    const diag1 = [];
-    for (let i = 0; i < size; i++) {
-      diag1.push(i * size + i);
-    }
-    lines.push(diag1);
+    // Diagonal 1
+    lines.push([...Array(size)].map((_, i) => i * size + i));
 
-    // Diagonal secundaria
-    const diag2 = [];
-    for (let i = 0; i < size; i++) {
-      diag2.push(i * size + (size - 1 - i));
-    }
-    lines.push(diag2);
+    // Diagonal 2
+    lines.push([...Array(size)].map((_, i) => i * size + (size - 1 - i)));
 
-    // Verificar si una línea está llena de X o de O
     for (const line of lines) {
-      const vals = line.map((index) => cells[index]);
+      const vals = line.map((i) => cells[i]);
       if (vals.every((v) => v === "X")) return "X";
       if (vals.every((v) => v === "O")) return "O";
     }
@@ -55,28 +57,73 @@ export default function Board({ size, onWin }) {
     return null;
   }
 
+  // IA fácil (random)
+  function aiMoveEasy(cells) {
+    const available = cells
+      .map((v, i) => (v === null ? i : null))
+      .filter((v) => v !== null);
+
+    return available[Math.floor(Math.random() * available.length)] ?? null;
+  }
+
+  // IA difícil (ataque + bloqueo simple)
+  function aiMoveHard(cells) {
+    const available = cells
+      .map((v, i) => (v === null ? i : null))
+      .filter((v) => v !== null);
+
+    // Ganar
+    for (const i of available) {
+      const temp = [...cells];
+      temp[i] = "O";
+      if (checkWinner(temp) === "O") return i;
+    }
+
+    // Bloquear
+    for (const i of available) {
+      const temp = [...cells];
+      temp[i] = "X";
+      if (checkWinner(temp) === "X") return i;
+    }
+
+    return aiMoveEasy(cells);
+  }
+
   function handleClick(i) {
-    if (squares[i]) return; // ya ocupada
+    handleEasterEgg(i);
+
+    if (squares[i]) return;
 
     const next = [...squares];
     next[i] = isX ? "X" : "O";
 
     const winner = checkWinner(next);
+
     setSquares(next);
 
+    // Si hay ganador
     if (winner) {
       onWin(winner);
-
-      // reinicio automático después de 1.2s
-      setTimeout(() => {
-        resetBoard();
-      }, 1200);
-
-      return; // no cambiar turno después de ganar
+      setTimeout(() => resetBoard(), 1200);
+      return;
     }
 
     setIsX(!isX);
   }
+
+  // Turno de la IA
+  useEffect(() => {
+    if (!isX && (mode === "ai-easy" || mode === "ai-hard")) {
+      const move =
+        mode === "ai-easy"
+          ? aiMoveEasy(squares)
+          : aiMoveHard(squares);
+
+      if (move !== null) {
+        setTimeout(() => handleClick(move), 400);
+      }
+    }
+  }, [isX]);
 
   return (
     <>
