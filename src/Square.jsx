@@ -3,7 +3,7 @@ export default function Square({ value, onClick }) {
     <button className="square" onClick={onClick}>
       {value && (
         <img
-          src={value === "X" ? "error.png" : "o.png"}
+          src={value === "X" ? "error.png" : ".png"}
           alt={value}
           className="piece"
         />
